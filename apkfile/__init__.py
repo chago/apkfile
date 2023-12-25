@@ -353,7 +353,7 @@ _extraction_patterns = {
     'supports_any_density': r'supports-any-density: \'([^\']+)\'',
     'langs': r'locales: \'([a-zA-Z0-9\'\s\-\_]+)\'',
     'densities': r'densities: \'([0-9\'\s]+)\'',
-    'abis': r'native-code: (.*)',
+    'abis': r'native-code: (.*)\r',
     'icons': r'application-icon-([0-9]+):\'' + r'([^\']+)\'',
     'split_name': r'split=\'([^\']+)\'',
 }
@@ -732,7 +732,13 @@ class _BaseZipApkFile(_BaseApkFile):
         if self._extracted:
             return
         splits_paths = list(filter(lambda x: x.endswith('.apk') and x != self._base_path, self._zipfile.namelist()))
-        self._zipfile.extractall(path=self._extract_path, members=(self._base_path, self._icon_path, *splits_paths))
+        icon_paths = list(filter(lambda x: x.endswith('icon.png') and x != self._base_path, self._zipfile.namelist()))
+        if len(icon_paths) == 1:
+            self._zipfile.extractall(path=self._extract_path, members=(self._base_path, self._icon_path, *splits_paths))
+            self.icon = os.path.join(self._extract_path, self._icon_path)
+        else:
+            self._zipfile.extractall(path=self._extract_path, members=(self._base_path, *splits_paths))
+            self.icon = None
         self._extracted = True
         self.base = ApkFile(path=os.path.join(self._extract_path, self._base_path), aapt_path=self._aapt_path)
         self.icon = os.path.join(self._extract_path, self._icon_path)
@@ -1150,3 +1156,4 @@ class ApksFile(_BaseZipApkFile):
         except FileExistsError:
             super().__init__(manifest_json_path='meta.sai_v1.json', **kwargs)
             self.meta_version = 1
+
